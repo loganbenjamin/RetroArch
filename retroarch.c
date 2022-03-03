@@ -1916,6 +1916,7 @@ bool command_event(enum event_command cmd, void *data)
 #endif
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
             runloop_st->runtime_shader_preset_path[0] = '\0';
+            runloop_st->runtime_blackframe_shader_preset_path[0] = '\0';
 #endif
 
             video_driver_restore_cached(settings);
@@ -5977,6 +5978,7 @@ bool retroarch_main_quit(void)
 #endif
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
       runloop_st->runtime_shader_preset_path[0] = '\0';
+      runloop_st->runtime_blackframe_shader_preset_path[0] = '\0';
 #endif
 
       if (     runloop_st->remaps_core_active

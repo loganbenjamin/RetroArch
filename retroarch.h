@@ -97,6 +97,7 @@ void retroarch_override_setting_unset(enum rarch_override_setting enum_idx, void
 bool retroarch_override_setting_is_set(enum rarch_override_setting enum_idx, void *data);
 
 const char* retroarch_get_shader_preset(void);
+const char* retroarch_get_blackframe_shader_preset(void);
 
 /**
  * retroarch_main_init:

@@ -241,6 +241,7 @@ struct runloop
 #endif
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
    char runtime_shader_preset_path[PATH_MAX_LENGTH];
+   char runtime_blackframe_shader_preset_path[PATH_MAX_LENGTH];
 #endif
    char runtime_content_path[PATH_MAX_LENGTH];
    char runtime_core_path[PATH_MAX_LENGTH];

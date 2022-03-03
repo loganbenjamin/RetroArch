@@ -54,6 +54,7 @@ typedef struct gl3
    const gfx_ctx_driver_t *ctx_driver;
    void *ctx_data;
    gl3_filter_chain_t *filter_chain;
+   gl3_filter_chain_t *blackframe_chain;
    GLuint *overlay_tex;
    float *overlay_vertex_coord;
    float *overlay_tex_coord;

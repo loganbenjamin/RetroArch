@@ -989,6 +989,23 @@ static bool gl3_init_filter_chain_preset(gl3_t *gl, const char *shader_path)
    return true;
 }
 
+static bool gl3_init_blackframe_chain_preset(gl3_t *gl, const char *shader_path)
+{
+   gl->blackframe_chain = gl3_filter_chain_create_from_preset(
+         shader_path,
+         gl->video_info.smooth
+         ? GLSLANG_FILTER_CHAIN_LINEAR 
+         : GLSLANG_FILTER_CHAIN_NEAREST);
+
+   if (!gl->blackframe_chain)
+   {
+      RARCH_ERR("[GLCore]: No black frame preset found at: \"%s\".\n", shader_path);
+      return false;
+   }
+
+   return true;
+}
+
 static bool gl3_init_filter_chain(gl3_t *gl)
 {
    const char *shader_path     = retroarch_get_shader_preset();
@@ -1008,6 +1025,14 @@ static bool gl3_init_filter_chain(gl3_t *gl)
 
    if (!gl3_init_filter_chain_preset(gl, shader_path))
       gl3_init_default_filter_chain(gl);
+
+   const char *blackframe_shader_path = retroarch_get_blackframe_shader_preset();
+   enum rarch_shader_type blackframe_type = video_shader_parse_type(blackframe_shader_path);
+
+   if (blackframe_type == RARCH_SHADER_SLANG)
+   {
+      gl3_init_blackframe_chain_preset(gl, blackframe_shader_path);
+   }
 
    return true;
 }
@@ -2014,23 +2039,68 @@ static bool gl3_frame(void *data, const void *frame,
 #ifndef EMSCRIPTEN
    /* Disable BFI during fast forward, slow-motion,
     * and pause to prevent flicker. */
-    if (
-         black_frame_insertion
-         && !input_driver_nonblock_state
-         && !runloop_is_slowmotion
-         && !runloop_is_paused 
-         && !gl->menu_texture_enable)
-    {
-        unsigned n;
-        for (n = 0; n < black_frame_insertion; ++n)
-        {
-          glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-          glClear(GL_COLOR_BUFFER_BIT);			
+   if (
+      black_frame_insertion
+      && !input_driver_nonblock_state
+      && !runloop_is_slowmotion
+      && !runloop_is_paused 
+      && !gl->menu_texture_enable)
+   {
+      unsigned n;
+      for (n = 0; n < black_frame_insertion; ++n)
+      {
+         if (gl->blackframe_chain) {
+            texture.image            = 0;
+            texture.width            = streamed->width;
+            texture.height           = streamed->height;
+            texture.padded_width     = 0;
+            texture.padded_height    = 0;
+            texture.format           = 0;
 
-          if (gl->ctx_driver->swap_buffers)
+            if (gl->hw_render_enable)
+            {
+               texture.image         = gl->hw_render_texture;
+               texture.format        = GL_RGBA8;
+               texture.padded_width  = gl->hw_render_max_width;
+               texture.padded_height = gl->hw_render_max_height;
+
+               if (texture.width == 0)
+                  texture.width = 1;
+               if (texture.height == 0)
+                  texture.height = 1;
+            }
+            else
+            {
+               texture.image         = streamed->tex;
+               texture.format        = gl->video_info.rgb32 ? GL_RGBA8 : GL_RGB565;
+               texture.padded_width  = streamed->width;
+               texture.padded_height = streamed->height;
+            }
+
+            gl3_filter_chain_set_frame_count(gl->blackframe_chain, frame_count);
+         #ifdef HAVE_REWIND
+            gl3_filter_chain_set_frame_direction(gl->blackframe_chain, state_manager_frame_is_reversed() ? -1 : 1);
+         #else
+            gl3_filter_chain_set_frame_direction(gl->blackframe_chain, 1);
+         #endif
+            gl3_filter_chain_set_input_texture(gl->blackframe_chain, &texture);
+            gl3_filter_chain_build_offscreen_passes(gl->blackframe_chain, &gl->filter_chain_vp);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            gl3_filter_chain_build_viewport_pass(gl->blackframe_chain, &gl->filter_chain_vp,
+                                                   gl->hw_render_bottom_left ? gl->mvp.data : gl->mvp_yflip.data);
+            gl3_filter_chain_end_frame(gl->blackframe_chain);
+         } else {
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+         }
+            
+         if (gl->ctx_driver->swap_buffers)
             gl->ctx_driver->swap_buffers(gl->ctx_data);
-        }  
-    }   
+      }  
+   }   
 #endif 
 
    if (    hard_sync

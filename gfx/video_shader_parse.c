@@ -2556,3 +2556,18 @@ const char *retroarch_get_shader_preset(void)
 
    return NULL;
 }
+
+/* get the name of the black frame preset */
+const char *retroarch_get_blackframe_shader_preset(void)
+{
+   settings_t *settings         = config_get_ptr();
+   runloop_state_t *runloop_st    = runloop_state_get_ptr();
+   const char *dir_video_shader = settings->paths.directory_video_shader;
+
+   if (!string_is_empty(runloop_st->runtime_blackframe_shader_preset_path))
+      return runloop_st->runtime_blackframe_shader_preset_path;
+
+   fill_pathname_join(runloop_st->runtime_blackframe_shader_preset_path, dir_video_shader, "blackframe.slangp", sizeof(runloop_st->runtime_blackframe_shader_preset_path));
+
+   return runloop_st->runtime_blackframe_shader_preset_path;
+}
